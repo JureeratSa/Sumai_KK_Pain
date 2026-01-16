@@ -1,0 +1,15 @@
+node_modules/
+.next/
+build/
+dist/
+__pycache__/
+*.pyc
+.DS_Store
+.idea/
+.vscode/
+*.log
+# Secrets
+Back/paindetection-d0ca2-firebase-adminsdk-fbsvc-2da0b73237.json
+Back/painproject-419f0-firebase-adminsdk-fbsvc-15c1537a76.json
+Back/test-firebase-fee55-firebase-adminsdk-fbsvc-cf1fbb64ea.json
+*.json

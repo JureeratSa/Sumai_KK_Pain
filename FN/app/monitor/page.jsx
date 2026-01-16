@@ -1,7 +1,7 @@
 "use client";
 import React from 'react';
 
-const Dashboard = () => {
+const MonitorPage = () => {
     return (
         <div className="min-h-screen bg-gray-50 p-8">
             
@@ -9,4 +9,4 @@ const Dashboard = () => {
     );
 };
 
-export default Dashboard;
+export default MonitorPage;

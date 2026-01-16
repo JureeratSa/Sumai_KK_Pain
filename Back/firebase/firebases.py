@@ -1,6 +1,7 @@
 from config import initialize_firebase
 from firebase_admin import db
 from datetime import datetime
+import time
 from apscheduler.schedulers.background import BackgroundScheduler
 
 initialize_firebase()
@@ -220,10 +221,59 @@ def sync_legacy_device_data():
         data = legacy_ref.get()
         
         if data:
-            # 2. Write to New Patient Path (Nested under Device ID)
-            target_hn = "HN001" 
-            new_path_ref = db.reference(f"patient/{target_hn}/Device no/{legacy_device_id}")
+            current_ts_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+            # 2. Add Timestamp to specific paths if they exist
+            # Paths: /1min, /1s, /5min
+            # Checking common key formats (with/without space)
+            for key in ["1min", "1 min", "1s", "1 s", "5min", "5 min"]:
+                if key in data and isinstance(data[key], dict):
+                    data[key]["timestamp"] = current_ts_str
+
+            # 3. Write to New Patient Path (Nested under Device ID)
+            target_hn = "HN001"
+            new_path_base = f"patient/{target_hn}/Device no/{legacy_device_id}" 
+            new_path_ref = db.reference(new_path_base)
             new_path_ref.update(data)
+            
+            # 4. Log EDA, PPG every 1 sec to /data
+            # Assuming this function runs every 1 sec (controlled by scheduler)
+            # Extract data from '1s' node preferably
+            source_1s = data.get("1 s") or data.get("1s") or {}
+            
+            eda_val = source_1s.get("EDA")
+            ppg_val = source_1s.get("PPG")
+
+            # Fallback to root or 1min if 1s is missing (optional)
+            if eda_val is None: eda_val = data.get("EDA")
+            if ppg_val is None: ppg_val = data.get("PPG")
+
+            if eda_val is not None and ppg_val is not None:
+                log_ref = db.reference(f"{new_path_base}/data")
+                # Use Unix timestamp as key for easy sorting/querying
+                log_key = str(int(time.time()))
+                
+                log_entry = {
+                    "EDA": eda_val,
+                    "PPG": ppg_val,
+                    "timestamp": current_ts_str
+                }
+                log_ref.child(log_key).set(log_entry)
+
+                # 5. Data Retention: Delete data older than 1 week 1 day (8 days)
+                # 8 days = 8 * 24 * 3600 seconds
+                retention_seconds = 8 * 24 * 3600
+                cutoff_timestamp = int(time.time()) - retention_seconds
+                
+                # Query items with key <= cutoff_timestamp
+                # Using order_by_key (lexicographical, works for same-length timestamps)
+                old_logs = log_ref.order_by_key().end_at(str(cutoff_timestamp)).get()
+                
+                if old_logs:
+                    for k in old_logs:
+                        log_ref.child(k).delete()
+                    # print(f"Cleaned up {len(old_logs)} old log entries.")
+            
             # print(f"Synced Device {legacy_device_id} to {target_hn}")
             
     except Exception as e:
@@ -250,8 +300,31 @@ def save_patient_data(hn, name, age, gender, blood_group, height, weight, bmi, s
         "Assigned_Device_ID": device_no
     }
 
+def all_patient(hn, name, age, gender, blood_group, height, weight, bmi, service_location, admission_date, bad_no=None, device_no=None):
+    # Base Path: Allpatients/{HN}
+    ref = db.reference(f"Allpatients/{hn}")
+
+    patient_data = {
+        "HN": hn,
+        "name": name,
+        "Age": age,
+        "Gender": gender,
+        "Blood group": blood_group,
+        "Heigh": height,
+        "Weight": weight,
+        "BMI": bmi,
+        "Service Location": service_location,
+        "Admission Date": admission_date
+    }
+    
+    if bad_no:
+        patient_data["Bad no"] = bad_no
+    
+    if device_no:
+        patient_data["Assigned_Device_ID"] = device_no
+
     ref.update(patient_data)
-    print(f"Saved patient data for HN: {hn} at path /patient/{hn}")
+    print(f"Saved patient data for HN: {hn} at path /Allpatients/{hn}")
 
 def save_prediction_to_patient(hn, device_id, pain_level, eda, lf_hf, st, bmi, timestamp):
     """

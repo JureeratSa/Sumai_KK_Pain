@@ -14,14 +14,14 @@ import { initializeApp } from "firebase/app";
 
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyBWgVJNagD8ttdzlJOSzzlmIGqMcserE2Y",
-  authDomain: "test-firebase-fee55.firebaseapp.com",
-  databaseURL: "https://test-firebase-fee55-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "test-firebase-fee55",
-  storageBucket: "test-firebase-fee55.firebasestorage.app",
-  messagingSenderId: "921191423657",
-  appId: "1:921191423657:web:8162de73acd3b310a353b8",
-  measurementId: "G-LJY37H36HC"
+  apiKey: "AIzaSyD2o4EyppYRqtpK4AZ87ouKeVkmkGl5Do0",
+  authDomain: "paindetection-d0ca2.firebaseapp.com",
+  databaseURL: "https://paindetection-d0ca2-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "paindetection-d0ca2",
+  storageBucket: "paindetection-d0ca2.firebasestorage.app",
+  messagingSenderId: "625112195070",
+  appId: "1:625112195070:web:5c4938535205fd833a6aaf",
+  measurementId: "G-V3Q4197ZE8"
 };
 
 const app = initializeApp(firebaseConfig);
