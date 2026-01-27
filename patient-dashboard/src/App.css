@@ -1,0 +1,69 @@
+.app-container {
+  min-height: 100vh;
+  background-color: #fff;
+  /* White as per image usually, or maybe a very light grey? Image bottom is blue but that might be footer. Top is blue. Middle is white. */
+  display: flex;
+  flex-direction: column;
+}
+
+.main-content {
+  flex: 1;
+  width: 100%;
+  margin: 0 auto;
+  padding: 2rem;
+  box-sizing: border-box;
+}
+
+.page-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 2rem;
+  color: #1e293b;
+}
+
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 3rem;
+}
+
+.showing-text {
+  font-size: 0.875rem;
+  color: #334155;
+  font-weight: 600;
+}
+
+.page-controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.page-btn {
+  appearance: none;
+  background: none;
+  border: none;
+  font-size: 0.875rem;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  font-weight: 600;
+  color: #64748b;
+  border-radius: 4px;
+}
+
+.page-btn:hover {
+  color: #0f172a;
+}
+
+.page-btn.active {
+  background-color: #cbd5e1;
+  color: #0f172a;
+}
+
+.footer-bar {
+  height: 80px;
+  background-color: #bfdbfe;
+  width: 100%;
+  margin-top: auto;
+  border-top: 5px solid #3b82f6;
+}
