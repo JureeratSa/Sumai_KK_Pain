@@ -1,0 +1,369 @@
+/* Dashboard Container */
+.dashboard-container {
+    background-color: white;
+    /* Changed to white as per my analysis of the spacing */
+    min-height: 100vh;
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    flex-direction: column;
+}
+
+.dashboard-content {
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+/* Stats Row */
+.stats-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 4px;
+    /* Slightly sharper as per design */
+    padding: 1.5rem;
+    /* Spacious */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    /* Stronger shadow */
+    position: relative;
+    overflow: visible;
+}
+
+.stat-icon-wrapper {
+    /* Large icon on the left */
+    width: 100px;
+    /* Space for the image */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.stat-icon-wrapper img {
+    max-width: 100%;
+    height: auto;
+}
+
+.stat-info {
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.stat-info h3 {
+    font-size: 0.9rem;
+    color: #444;
+    margin: 0 0 5px 0;
+    font-weight: 600;
+}
+
+.stat-value {
+    font-size: 3rem;
+    /* Bigger number */
+    font-weight: 800;
+    color: #1a1a1a;
+    line-height: 1.1;
+    margin-bottom: 5px;
+}
+
+.stat-trend {
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.stat-trend.positive {
+    color: #ff4d4f;
+    /* Reddish for +3% */
+}
+
+.green-text {
+    color: #52c41a;
+    font-weight: 700;
+    font-size: 0.85rem;
+}
+
+/* Pain Stats Row */
+.pain-stats-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.pain-card {
+    border-radius: 4px;
+    /* Sharper */
+    padding: 2rem;
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 140px;
+}
+
+.pain-card.no-pain {
+    background-color: #bbf7d0;
+    /* Light pastel green */
+    color: #166534;
+    /* Dark green text */
+}
+
+.pain-card.pain {
+    background-color: #fca5a5;
+    /* Light pastel red/salmon */
+    color: #991b1b;
+    /* Dark red text */
+}
+
+.pain-card h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    opacity: 0.9;
+}
+
+.pain-value {
+    font-size: 3rem;
+    font-weight: 800;
+    margin: 0.5rem 0;
+}
+
+.pain-label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    opacity: 0.9;
+}
+
+/* Main Grid */
+.main-grid {
+    display: grid;
+    grid-template-columns: 45% 53%;
+    /* Adjust chart ratio */
+    gap: 2%;
+}
+
+.chart-card,
+.updates-card {
+    background: white;
+    /* No shadow for the chart container? Design looks flat or subtle shadow */
+    box-shadow: none;
+    padding: 0;
+}
+
+/* Specific styling for chart card to match image */
+.chart-card {
+    padding: 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.updates-card {
+    /* Ensure transparency or white bg */
+    background: transparent;
+    box-shadow: none;
+}
+
+.chart-card h3,
+.updates-card h3 {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    font-size: 1rem;
+    color: #111;
+    font-weight: 700;
+}
+
+/* Pie Chart */
+.pie-chart-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pie-chart {
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    /* Salmon #ff9999 and Purple #8884d8 replacement */
+    /* Women: Purple #818cf8, Men: Salmon #fb7185 */
+    margin-right: 2rem;
+}
+
+.pie-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    font-size: 0.9rem;
+    color: #555;
+    font-weight: 500;
+}
+
+.dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 8px;
+    display: inline-block;
+}
+
+.dot.women {
+    background-color: #818cf8;
+}
+
+.dot.men {
+    background-color: #fb7185;
+}
+
+/* Updates List */
+.updates-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.live-badge {
+    background-color: #ff4d4f;
+    color: white;
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 700;
+}
+
+.updates-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.update-item {
+    background: white;
+    padding: 1rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    display: flex;
+    align-items: center;
+}
+
+.patient-avatar-placeholder {
+    width: 40px;
+    height: 40px;
+    background-color: #e5e7eb;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-right: 1rem;
+}
+
+.patient-avatar-placeholder svg {
+    fill: #9ca3af;
+}
+
+.update-info {
+    flex: 1;
+}
+
+.update-info h4 {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.update-bed,
+.update-status {
+    font-size: 0.8rem;
+    color: #6b7280;
+    margin-right: 0.5rem;
+}
+
+.update-status-badge {
+    font-size: 0.7rem;
+    background-color: #fee2e2;
+    color: #991b1b;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+.update-meta {
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
+}
+
+.update-time {
+    font-size: 0.75rem;
+    color: #9ca3af;
+}
+
+.acknowledge-btn {
+    background: none;
+    border: 1px solid #e5e7eb;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    color: #4b5563;
+    cursor: pointer;
+}
+
+.acknowledge-btn:hover {
+    background: #f3f4f6;
+}
+
+/* Pagination */
+.pagination-simple {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: #6b7280;
+    margin-top: 1.5rem;
+    align-items: center;
+}
+
+.pagination-simple span {
+    cursor: pointer;
+}
+
+.pagination-simple .page-num {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 4px;
+}
+
+.pagination-simple .page-num.active {
+    background-color: #e5e7eb;
+    color: #111;
+    font-weight: 600;
+}
+
+/* Footer */
+.dashboard-footer {
+    text-align: center;
+    padding: 1.5rem;
+    color: #9ca3af;
+    font-size: 0.8rem;
+    margin-top: auto;
+}

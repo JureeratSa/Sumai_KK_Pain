@@ -1,10 +1,10 @@
 "use client";
 <<<<<<< HEAD
 import { useEffect, useState } from 'react';
-// import Header from './components/Header';
+// import Header from './components/Header'; // Using Layout instead
 import { db } from '../firebase';
 import { ref, onValue, get, child } from 'firebase/database';
-// import './App.css';
+import './Dashboard.css';
 // import patientIcon from './assets/patient_icon.svg';
 // import bedIcon from './assets/bed_icon.svg';
 
@@ -24,7 +24,8 @@ const Dashboard = () => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Listen to the Doctor node in Realtime Database
+        // Listen to the Doctor node in Realtime Database as per git source
+        // Note: If Doctor/DOC-TEST-001 is empty, this will result in 0 patients.
         const doctorRef = ref(db, 'Doctor/DOC-TEST-001');
 
         const unsubscribe = onValue(doctorRef, async (snapshot) => {
@@ -73,7 +74,11 @@ const Dashboard = () => {
                     setStats({ total, pain, noPain, men, women, occupancy });
                 } else {
                     setPatients([]);
+                    setStats({ total: 0, pain: 0, noPain: 0, men: 0, women: 0, occupancy: 0 });
                 }
+            } else {
+                 setPatients([]);
+                 setStats({ total: 0, pain: 0, noPain: 0, men: 0, women: 0, occupancy: 0 });
             }
             setLoading(false);
         });
@@ -93,7 +98,6 @@ const Dashboard = () => {
             {/* <Header /> */}
 
             <main className="dashboard-content">
-                {/* Top Stats Row */}
                 {/* Top Stats Row */}
                 <div className="stats-row">
                     <div className="stat-card">
