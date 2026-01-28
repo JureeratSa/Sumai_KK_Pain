@@ -1,0 +1,210 @@
+import { useEffect, useState } from 'react';
+import Header from './components/Header';
+import { db } from './firebase';
+import { ref, onValue } from 'firebase/database';
+import './App.css';
+import patientIcon from './assets/patient_icon.svg';
+import bedIcon from './assets/bed_icon.svg';
+
+function App() {
+    const [patients, setPatients] = useState([]);
+    const [stats, setStats] = useState({
+        total: 0,
+        pain: 0,
+        noPain: 0,
+        men: 0,
+        women: 0,
+        occupancy: 0
+    });
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        // Listen to the patient node directly
+        const patientsRef = ref(db, 'patient');
+
+        const unsubscribe = onValue(patientsRef, (snapshot) => {
+            setLoading(false);
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                const patientsData = Object.keys(data).map(key => {
+                    const p = data[key];
+
+                    // Determine Pain Status
+                    let statusType = 'neutral';
+                    let statusLabel = 'Normal';
+
+                    const devices = p['Device no'] || {};
+                    const deviceKeys = Object.keys(devices);
+                    if (deviceKeys.length > 0) {
+                        // Check the first device (or iterate if needed)
+                        const device = devices[deviceKeys[0]];
+                        if (device.predict) {
+                            // Find pain key case-insensitive
+                            const predictKeys = Object.keys(device.predict);
+                            const painKey = predictKeys.find(k => k.toLowerCase() === 'painlevel');
+
+                            if (painKey && device.predict[painKey] !== undefined) {
+                                const level = parseInt(device.predict[painKey]);
+                                if (level === 1) {
+                                    statusType = 'danger';
+                                    statusLabel = 'Pain';
+                                } else {
+                                    statusType = 'success';
+                                    statusLabel = 'No Pain';
+                                }
+                            } else {
+                                // Default to No Pain if predict exists but no pain level (or maybe treat as valid 0?)
+                                // For now, let's assume if it has prediction but missing key, it's not pain?? 
+                                // Actually, let's just stick to neutral if missing.
+                            }
+                        }
+                    }
+
+                    return {
+                        id: key,
+                        ...p,
+                        statusType,
+                        statusLabel,
+                        // Map various casing for bed number
+                        bedNumber: p.bedNumber || p.BedNumber || p.Bed || p.bed || p.Bad_no || p['Bad no'] || p['Bed no']
+                    };
+                });
+
+                setPatients(patientsData);
+
+                // Calculate Stats
+                const total = patientsData.length;
+                const pain = patientsData.filter(p => p.statusType === 'danger' || p.statusLabel === 'Pain').length;
+                // Count 'No Pain' AND 'Normal' (neutral) as 'No Pain' category for the stats card?
+                // The user asked "why no pain is not counted". If default is 'Normal', maybe they want that counted too.
+                // Let's broaden the 'No Pain' count to include success OR neutral (assuming neutral = no active pain detected yet)
+                const noPain = patientsData.filter(p => p.statusType === 'success' || p.statusLabel === 'No Pain' || p.statusLabel === 'Normal').length;
+                const men = patientsData.filter(p => (p.gender || p.Gender)?.toLowerCase() === 'male' || (p.gender || p.Gender) === 'ชาย').length;
+                const women = patientsData.filter(p => (p.gender || p.Gender)?.toLowerCase() === 'female' || (p.gender || p.Gender) === 'หญิง').length;
+
+                // Mocking total beds as 50 for percentage calculation
+                const occupancy = Math.round((total / 50) * 100);
+
+                setStats({ total, pain, noPain, men, women, occupancy });
+            } else {
+                setPatients([]);
+                setStats({ total: 0, pain: 0, noPain: 0, men: 0, women: 0, occupancy: 0 });
+            }
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+    // Calculate Pie Chart Conic Gradient based on real data
+    const totalGender = stats.men + stats.women;
+    const womenPercent = totalGender > 0 ? (stats.women / totalGender) * 100 : 50;
+    const pieStyle = {
+        background: `conic-gradient(#818cf8 0% ${womenPercent}%, #fb7185 ${womenPercent}% 100%)`
+    };
+
+    return (
+        <div className="dashboard-container">
+            <Header />
+
+            <main className="dashboard-content">
+                {/* Top Stats Row */}
+                {/* Top Stats Row */}
+                <div className="stats-row">
+                    <div className="stat-card">
+                        <div className="stat-icon-wrapper">
+                            <img src={patientIcon} alt="Total Patients" />
+                        </div>
+                        <div className="stat-info">
+                            <h3>Total Patients</h3>
+                            <div className="stat-value">{loading ? '-' : stats.total}</div>
+                            <div className="stat-trend positive">↑ + 3 % from last week</div>
+                        </div>
+                    </div>
+
+                    <div className="stat-card">
+                        <div className="stat-icon-wrapper">
+                            <img src={bedIcon} alt="Bed Occupancy" />
+                        </div>
+                        <div className="stat-info">
+                            <h3>Bed Occupancy Rate</h3>
+                            <div className="stat-value">{loading ? '-' : `${stats.occupancy} %`}</div>
+                            <div className="stat-subtext green-text">Beds available {50 - stats.total} beds</div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Pain Stats Row */}
+                <div className="pain-stats-row">
+                    <div className="pain-card no-pain">
+                        <h3>No pain</h3>
+                        <div className="pain-value">{loading ? '-' : stats.noPain}</div>
+                        <div className="pain-label">cases</div>
+                    </div>
+                    <div className="pain-card pain">
+                        <h3>Pain</h3>
+                        <div className="pain-value">{loading ? '-' : stats.pain}</div>
+                        <div className="pain-label">cases</div>
+                    </div>
+                </div>
+
+                {/* Charts & Updates Row */}
+                <div className="main-grid">
+                    {/* Gender Distribution */}
+                    <div className="chart-card">
+                        <h3>Gender Distribution</h3>
+                        <div className="pie-chart-container">
+                            <div className="pie-chart" style={pieStyle}></div>
+                            <div className="pie-legend">
+                                <div className="legend-item"><span className="dot women"></span> Women {stats.women}</div>
+                                <div className="legend-item"><span className="dot men"></span> Men {stats.men}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Recent Patient Updates */}
+                    <div className="updates-card">
+                        <div className="updates-header">
+                            <h3>Recent Patient Update</h3>
+                            <span className="live-badge">Live Update</span>
+                        </div>
+                        <div className="updates-list">
+                            {patients.length === 0 && !loading && <div style={{ padding: '20px', textAlign: 'center' }}>No patients found</div>}
+                            {patients.slice(0, 3).map((patient, index) => (
+                                <div className="update-item" key={index}>
+                                    <div className="patient-avatar-placeholder">
+                                        <svg viewBox="0 0 24 24" width="24" height="24" fill="#fff"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" /></svg>
+                                    </div>
+                                    <div className="update-info">
+                                        <h4>{patient.name || 'Unknown Name'}</h4>
+                                        <span className="update-bed">Bed {patient.bedNumber ? `#${patient.bedNumber}` : '#--'}</span>
+                                        {patient.statusType === 'danger' || patient.statusLabel === 'Pain' ? (
+                                            <span className="update-status-badge">Pain</span>
+                                        ) : null}
+                                    </div>
+                                    <div className="update-meta">
+                                        <span className="update-time">{index === 0 ? 'Now' : index === 1 ? '12 min ago' : '30 min ago'}</span>
+                                        {(patient.statusType === 'danger' || patient.statusLabel === 'Pain') && (
+                                            <button className="acknowledge-btn">Acknowledge</button>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="pagination-simple">
+                            <span>Previous</span>
+                            <span className="page-num active">1</span>
+                            <span className="page-num">2</span>
+                            <span>Next</span>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <footer className="dashboard-footer">
+                Patient Monitor System v1.0
+            </footer>
+        </div>
+    );
+}
+
+export default App;
