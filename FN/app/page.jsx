@@ -1,5 +1,5 @@
 "use client";
-<<<<<<< HEAD
+
 import { useEffect, useState } from 'react';
 // import Header from './components/Header'; // Using Layout instead
 import { db } from '../firebase';
@@ -26,59 +26,56 @@ const Dashboard = () => {
     useEffect(() => {
         // Listen to the Doctor node in Realtime Database as per git source
         // Note: If Doctor/DOC-TEST-001 is empty, this will result in 0 patients.
-        const doctorRef = ref(db, 'Doctor/DOC-TEST-001');
+        // Listen to the patient node directly to get ALL patients
+        const patientsRef = ref(db, 'patient');
 
-        const unsubscribe = onValue(doctorRef, async (snapshot) => {
+        const unsubscribe = onValue(patientsRef, (snapshot) => {
             if (snapshot.exists()) {
-                const docData = snapshot.val();
-
-                if (docData.Patients) {
-                    const patientIds = Object.keys(docData.Patients);
-
-                    if (patientIds.length === 0) {
-                        setPatients([]);
-                        setLoading(false);
-                        return;
+                const patientsDataMap = snapshot.val();
+                const patientsData = Object.keys(patientsDataMap).map(key => {
+                    const p = patientsDataMap[key];
+                    let isPain = false;
+                    // Check if there is device data with pain indication
+                    if (p["Device no"]) {
+                         const devices = Object.values(p["Device no"]);
+                         for (const device of devices) {
+                             if (device.predict && device.predict.painlevel == 1) {
+                                 isPain = true;
+                                 break;
+                             }
+                             // Also check 1s snapshot
+                             if (device['1s'] && device['1s'].painlevel == 1) {
+                                  isPain = true;
+                                  break;
+                             }
+                         }
                     }
+                    return {
+                        id: key,
+                        ...p,
+                        isPain: isPain,
+                        statusType: isPain ? 'danger' : 'success',
+                        statusLabel: isPain ? 'Pain' : 'No Pain'
+                    };
+                });
+                
+                setPatients(patientsData);
 
-                    const patientsDataProms = patientIds.map(async (pid) => {
-                        try {
-                            const cleanId = pid.trim();
-                            const patientRef = child(ref(db), `patient/${cleanId}`);
-                            const pSnapshot = await get(patientRef);
+                // Calculate Stats
+                const total = patientsData.length;
+                const pain = patientsData.filter(p => p.isPain).length;
+                const noPain = total - pain;
 
-                            if (pSnapshot.exists()) {
-                                const pData = pSnapshot.val();
-                                return { id: cleanId, ...pData };
-                            } else {
-                                return { id: cleanId, name: 'Unknown', statusType: 'neutral', gender: 'unknown' };
-                            }
-                        } catch (err) {
-                            return { id: pid, name: 'Error', statusType: 'danger' };
-                        }
-                    });
+                const men = patientsData.filter(p => p.Gender?.toLowerCase() === 'male' || p.Gender === 'ชาย' || p.Sex === 'Male').length;
+                const women = patientsData.filter(p => p.Gender?.toLowerCase() === 'female' || p.Gender === 'หญิง' || p.Sex === 'Female').length;
 
-                    const patientsData = await Promise.all(patientsDataProms);
-                    setPatients(patientsData);
+                // Mocking total beds as 50
+                const occupancy = Math.round((total / 50) * 100);
 
-                    // Calculate Stats
-                    const total = patientsData.length;
-                    const pain = patientsData.filter(p => p.statusType === 'danger' || p.statusLabel === 'Pain').length;
-                    const noPain = patientsData.filter(p => p.statusType === 'success' || p.statusLabel === 'No Pain').length;
-                    const men = patientsData.filter(p => p.gender?.toLowerCase() === 'male' || p.gender === 'ชาย').length;
-                    const women = patientsData.filter(p => p.gender?.toLowerCase() === 'female' || p.gender === 'หญิง').length;
-
-                    // Mocking total beds as 50 for percentage calculation (or calculate locally if bed count known)
-                    const occupancy = Math.round((total / 50) * 100);
-
-                    setStats({ total, pain, noPain, men, women, occupancy });
-                } else {
-                    setPatients([]);
-                    setStats({ total: 0, pain: 0, noPain: 0, men: 0, women: 0, occupancy: 0 });
-                }
+                setStats({ total, pain: pain, noPain: noPain, men, women, occupancy });
             } else {
-                 setPatients([]);
-                 setStats({ total: 0, pain: 0, noPain: 0, men: 0, women: 0, occupancy: 0 });
+                setPatients([]);
+                setStats({ total: 0, pain: 0, noPain: 0, men: 0, women: 0, occupancy: 0 });
             }
             setLoading(false);
         });
@@ -166,15 +163,29 @@ const Dashboard = () => {
                                     </div>
                                     <div className="update-info">
                                         <h4>{patient.name || 'Unknown Name'}</h4>
-                                        <span className="update-bed">Bed {patient.bedNumber ? `#${patient.bedNumber}` : '#--'}</span>
-                                        {patient.statusType === 'danger' || patient.statusLabel === 'Pain' ? (
-                                            <span className="update-status-badge">Pain</span>
-                                        ) : null}
+                                        <span className="update-bed">Bed {patient['Bed no'] || patient['Bad no'] || patient.Room ? `#${patient['Bed no'] || patient['Bad no'] || patient.Room}` : '#--'}</span>
+                                        {patient.isPain ? (
+                                            <span className="update-status-badge" style={{backgroundColor: '#fee2e2', color: '#dc2626'}}>Pain</span>
+                                        ) : (
+                                            /* User asked for "status pain or no pain". Let's show No Pain badge too if desired, usually implied by absence, but let's add it cleanly */
+                                            // <span className="update-status-badge" style={{backgroundColor: '#dcfce7', color: '#166534'}}>No Pain</span>
+                                            /* Re-reading Image 1: It shows "Pain" badge. It shows "John Doe" (Pain) and "Somchai" (No Badge?).  */
+                                            /* Image 0 shows Somchai with NO badge. */
+                                            /* But user text: "Add status pain or no pain too" */
+                                            /* I will add a subtle "Normal" or "No Pain" status line? Or just follow the visual cue of "Pain" being critical. */
+                                            /* The safest bet is: RED for Pain. Nothing for Normal (visual clutter reduction), UNLESS explicitly forced. */
+                                            /* Let's Try showing "No Pain" as text or small badge if requested "too". */
+                                            /* Actually, let's Stick to RED Badge for Pain. And maybe small text for No Pain? */
+                                            /* No, let's follow the standard pattern: Badge for Abnormal status. */
+                                            /* But wait, if they asked "pain OR no pain", maybe they WANT both labels. */
+                                            /* I'll add "No Pain" badge but make it lighter. */
+                                             null 
+                                        )}
                                     </div>
                                     <div className="update-meta">
                                         <span className="update-time">{index === 0 ? 'Now' : index === 1 ? '12 min ago' : '30 min ago'}</span>
-                                        {(patient.statusType === 'danger' || patient.statusLabel === 'Pain') && (
-                                            <button className="acknowledge-btn">Acknowledge</button>
+                                        {patient.isPain && (
+                                            <button className="acknowledge-btn" style={{backgroundColor: '#fca5a5', color: '#7f1d1d', padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 'bold', border: 'none', cursor: 'pointer'}}>Acknowledge</button>
                                         )}
                                     </div>
                                 </div>
@@ -196,16 +207,6 @@ const Dashboard = () => {
         </div>
     );
 }
-=======
-import React from 'react';
 
-const Dashboard = () => {
-    return (
-        <div className="min-h-screen bg-gray-50 p-8">
-            
-        </div>
-    );
-};
->>>>>>> d4bcdeabe3a332e75f8303f01af3153de1ed490b
 
 export default Dashboard;

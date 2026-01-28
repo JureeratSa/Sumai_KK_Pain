@@ -1,5 +1,5 @@
 "use client";
-<<<<<<< HEAD
+
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 // import Header from './components/Header';
@@ -20,91 +20,42 @@ const MonitorPage = () => {
         router.push(`/patient/${id}`);
     };
 
-    // Implement real-time listener for the Doctor's patient list as per git source
+    // Implement real-time listener for ALL patients
     useEffect(() => {
-        setDebugLog("STEP 1: Attempting to subscribe to RTDB path 'Doctor/DOC-TEST-001'...");
+        setDebugLog("STEP 1: Connecting to 'patient' node...");
 
-        // SAFETY CHECK: Warn if likely using mock config
-        const connectionTimeout = setTimeout(() => {
-        setDebugLog("TIMEOUT: Connection taking too long. Please check your firebase config/internet.");
-        }, 8000);
+        const patientsRef = ref(db, 'patient');
 
-        try {
-        // 1. Listen to the Doctor node in Realtime Database
-        const doctorRef = ref(db, 'Doctor/DOC-TEST-001');
-
-        const unsubscribe = onValue(doctorRef, async (snapshot) => {
-            clearTimeout(connectionTimeout);
+        const unsubscribe = onValue(patientsRef, (snapshot) => {
             if (snapshot.exists()) {
-            const docData = snapshot.val();
-            const keys = Object.keys(docData);
-            // 1. Capture Doctor Name (to display on patient card if missing)
-            const doctorName = docData.name || "Unknown Doctor";
-
-            setDebugLog(`STEP 2: Found Doctor Node (${doctorName}). Fields: ${keys.join(', ')}`);
-
-            if (docData.Patients) {
-                const patientsMap = docData.Patients;
-                const patientIds = Object.keys(patientsMap);
-                setDebugLog(`STEP 3: Found 'Patients' node with ${patientIds.length} IDs: ${patientIds.join(', ')}`);
-
-                if (patientIds.length === 0) {
-                setPatients([]);
-                setDebugLog("STEP 3: 'Patients' node is empty.");
-                return;
-                }
-
-                // 2. Fetch details for each patient ID from the 'patient' node
-                const patientsDataProms = patientIds.map(async (pid) => {
-                try {
-                    const cleanId = pid.trim();
-                    // Assuming 'patient' is a root node alongside 'Doctor'
-                    const patientRef = child(ref(db), `patient/${cleanId}`);
-                    const pSnapshot = await get(patientRef);
-
-                    if (pSnapshot.exists()) {
-                    const pData = pSnapshot.val();
+                const patientsMap = snapshot.val();
+                setDebugLog(`STEP 2: Found ${Object.keys(patientsMap).length} patients.`);
+                
+                const patientsData = Object.keys(patientsMap).map(key => {
+                    const pData = patientsMap[key];
                     return {
-                        id: cleanId,
+                        id: key,
                         ...pData,
-                        // Map specific fields requested by user
-                        doctor: pData.doctor || doctorName, // Use Doctor Node name if patient doesn't have one
-                        bedNumber: pData.bedNumber || pData.BedNumber || '-',
-                        deviceNumber: pData.deviceNumber || pData.DeviceNumber || pData.device_id || '-'
+                        // Detailed Mapping
+                        name: pData.name || 'Unknown',
+                        doctor: pData.Doctor_name || pData.doctor || 'Unknown Doctor',
+                        bedNumber: pData['Bed no'] || pData['Bad no'] || pData.Room || pData.bedNumber || '-',
+                        deviceNumber: pData['Assigned_Device_ID'] || pData.deviceNumber || '-'
                     };
-                    } else {
-                    console.warn(`Patient not found at 'patient/${cleanId}'`);
-                    return { id: cleanId, name: 'Data Missing', gender: '-', doctor: doctorName, deviceNumber: '-', bedNumber: '-', statusLabel: 'Missing', statusType: 'neutral' };
-                    }
-                } catch (err) {
-                    console.error(`Error fetching patient ${pid}:`, err);
-                    return { id: pid, name: 'Error', doctor: doctorName, statusLabel: 'Error', statusType: 'danger' };
-                }
                 });
 
-                const patientsData = await Promise.all(patientsDataProms);
                 setPatients(patientsData);
-                setDebugLog(`STEP 4: Loaded ${patientsData.length} patients successfully.`);
+                setDebugLog(`STEP 3: Loaded ${patientsData.length} patients.`);
             } else {
-                console.warn("Doctor node found but missing 'Patients' field.");
-                setDebugLog("STEP 3 Fail: 'Patients' field missing in Doctor node.");
                 setPatients([]);
-            }
-            } else {
-            setPatients([]);
-            setDebugLog("STEP 2 Fail: Node 'Doctor/DOC-TEST-001' does not exist in Realtime Database.");
+                setDebugLog("STEP 2: 'patient' node is empty.");
             }
         }, (error) => {
-            console.error("Error connecting to Doctor node:", error);
-            setDebugLog(`STEP 1 Fail: Connection Error: ${error.message}`);
+            console.error("Error connecting to patient node:", error);
+            setDebugLog(`Error: ${error.message}`);
         });
 
-        // Cleanup listener
         return () => unsubscribe();
-        } catch (err) {
-        console.error("Setup Error:", err);
-        setDebugLog(`Setup Exception: ${err.message}`);
-        }
     }, []);
 
     const handleEditClick = (patient) => {
@@ -177,16 +128,5 @@ const MonitorPage = () => {
         </div>
     );
 }
-=======
-import React from 'react';
-
-const MonitorPage = () => {
-    return (
-        <div className="min-h-screen bg-gray-50 p-8">
-            
-        </div>
-    );
-};
->>>>>>> d4bcdeabe3a332e75f8303f01af3153de1ed490b
 
 export default MonitorPage;

@@ -31,11 +31,7 @@ const PatientCard = ({ patient, onEdit, onClick }) => {
                 </div>
             </div>
 
-            <div className="card-section status-section">
-                <span className={`status-badge ${patient.statusType}`}>
-                    {patient.statusLabel}
-                </span>
-            </div>
+
 
             <div className="card-section action-section">
                 <button className="edit-btn" onClick={(e) => { e.stopPropagation(); onEdit(); }}>
