@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 // import Header from './components/Header'; // Using Layout instead
 import PatientCard from '../../components/PatientCard';
 import EditPatientModal from '../../components/EditPatientModal';
@@ -8,10 +9,15 @@ import { ref, onValue, get, update, child } from 'firebase/database';
 // import './App.css'; 
 
 const MonitorPage = () => {
+  const router = useRouter(); // Use useRouter from 'next/navigation'
   const [patients, setPatients] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPatient, setCurrentPatient] = useState(null);
   const [debugLog, setDebugLog] = useState("Initializing Realtime Database connection...");
+
+  const handlePatientClick = (id) => {
+      router.push(`/patient/${id}`);
+  };
 
   // Implement real-time listener for the Doctor's patient list
   useEffect(() => {
@@ -139,6 +145,7 @@ const MonitorPage = () => {
               key={index}
               patient={patient}
               onEdit={() => handleEditClick(patient)}
+              onClick={() => handlePatientClick(patient.id)}
             />
           ))}
         </div>
