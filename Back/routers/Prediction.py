@@ -45,9 +45,9 @@ def predict_AVG1M_from_firebase():
             st_val = float(input_data["ST"])
             bmi_val = float(input_data["BMI"])
 
-            if eda_tonic == 0 and lf_hf_ratio == 0 and st_val == 0:
-                # Skip if empty data (all zeros)
-                continue
+            # if eda_tonic == 0 and lf_hf_ratio == 0 and st_val == 0:
+            #     # Skip if empty data (all zeros)
+            #     continue
 
             input_data_array = np.array([[
                 eda_tonic,

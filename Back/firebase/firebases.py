@@ -331,7 +331,16 @@ def save_prediction_to_patient(hn, device_id, pain_level, eda, lf_hf, st, bmi, t
     Save prediction result to the new Patient-centric structure
     Path: patient/{hn}/Device no/{device_id}/predict
     """
-    ref = db.reference(f"patient/{hn}/Device no/{device_id}/predict")
+    # 1. Check previous state for transition logging
+    predict_path = f"patient/{hn}/Device no/{device_id}/predict"
+    ref = db.reference(predict_path)
+    current_data = ref.get()
+    
+    prev_pain = 0
+    if current_data and isinstance(current_data, dict):
+        current_val = current_data.get("painlevel")
+        if current_val is not None:
+             prev_pain = int(current_val)
     
     predict_data = {
         "timestamp": timestamp,
@@ -342,6 +351,12 @@ def save_prediction_to_patient(hn, device_id, pain_level, eda, lf_hf, st, bmi, t
         "ST": st
     }
     
+    # 2. Log to history if transition to Pain (1) from Non-Pain (or if forced refresh on 1? Let's stick to transition for now to avoid duplicates)
+    if int(pain_level) == 1 and prev_pain != 1:
+         history_ref = db.reference(f"patient/{hn}/Device no/{device_id}/prediction_history")
+         history_ref.push(predict_data)
+         print(f"📜 Added to Pain History for {hn}")
+
     ref.update(predict_data)
     # print(f"✅ Prediction Saved for {hn} ({device_id}): Pain Level {pain_level}")
 

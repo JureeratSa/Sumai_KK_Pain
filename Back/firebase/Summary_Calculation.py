@@ -95,7 +95,12 @@ def update_summary_firebase():
                 new_patients_today_count += 1
 
             # 2. สูตร Gender Distribution
-            gender = data.get("Gender", "").lower() # แปลงเป็นตัวเล็กเพื่อง่ายต่อการเช็ค
+            gender = data.get("Gender", "")
+            if not gender:
+                gender = data.get("Sex", "")
+            
+            gender = gender.lower()
+
             if gender == "male" or gender == "chai": # เผื่อเก็บเป็นภาษาไทย
                 male_count += 1
             elif gender == "female" or gender == "ying":

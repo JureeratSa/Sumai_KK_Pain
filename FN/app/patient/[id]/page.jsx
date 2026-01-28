@@ -8,14 +8,16 @@ import Link from "next/link";
 const PatientDetail = () => {
   const { id } = useParams();
   const [patientData, setPatientData] = useState();
+  const [doctorData, setDoctorData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("patient-info");
 
   useEffect(() => {
     if (!id) return;
     const patientRef = ref(db, `patient/${id}`);
+    const doctorRef = ref(db, 'Doctor');
 
-    const unsubscribe = onValue(patientRef, (snapshot) => {
+    const unsubscribePatient = onValue(patientRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
         setPatientData(data);
@@ -23,7 +25,22 @@ const PatientDetail = () => {
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    const unsubscribeDoctor = onValue(doctorRef, (snapshot) => {
+        const doctors = snapshot.val();
+        if (doctors) {
+            const foundDoctor = Object.values(doctors).find(doc => 
+                doc.Patients && doc.Patients[id] === true
+            );
+            if (foundDoctor) {
+                setDoctorData(foundDoctor);
+            }
+        }
+    });
+
+    return () => {
+        unsubscribePatient();
+        unsubscribeDoctor();
+    };
   }, [id]);
 
   if (loading) {
@@ -33,6 +50,42 @@ const PatientDetail = () => {
       </div>
     );
   }
+
+  // Helper Data Extraction
+  let latest = null;
+  let realtime = null;
+
+  if (patientData?.["Device no"]) {
+      const devices = Object.values(patientData["Device no"]);
+
+      // 1. Find Latest Prediction (for Pain History & Doctor Info)
+      const allPredicts = devices.map(d => d.predict).filter(p => p && p.timestamp);
+      if (allPredicts.length > 0) {
+        allPredicts.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+        latest = allPredicts[0];
+      }
+
+      // 2. Find Realtime Data (1s) for Charts (Heart Rate / EDA)
+      for (const device of devices) {
+          // Check for "1 s" (common) or "1s"
+          if (device['1 s']) {
+              realtime = device['1 s'];
+              break; 
+          }
+          if (device['1s']) {
+              realtime = device['1s'];
+              break;
+          }
+      }
+  }
+
+  const formatTime = (ts) => {
+      if (!ts) return "-";
+      return new Date(ts).toLocaleString('en-US', { 
+        month: 'long', day: 'numeric', year: 'numeric', 
+        hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: true 
+      });
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -52,9 +105,15 @@ const PatientDetail = () => {
 
             {/* Status Badge */}
             <div className="mb-8 text-center">
-               <span className="bg-[#baea9e] text-[#1e3a8a] px-8 py-1.5 rounded-md font-semibold text-sm inline-block w-full">
-                 Normal
-               </span>
+               {latest?.painlevel === 1 ? (
+                 <span className="bg-[#fee2e2] text-red-800 px-8 py-1.5 rounded-md font-semibold text-sm inline-block w-full">
+                   Pain
+                 </span>
+               ) : (
+                 <span className="bg-[#baea9e] text-[#1e3a8a] px-8 py-1.5 rounded-md font-semibold text-sm inline-block w-full">
+                   Normal
+                 </span>
+               )}
             </div>
 
             {/* Details Section */}
@@ -63,7 +122,7 @@ const PatientDetail = () => {
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-500">Bed no.</span>
-                  <span className="font-bold text-gray-800">{patientData?.["Bed no"] || patientData?.Room || "-"}</span>
+                  <span className="font-bold text-gray-800">{patientData?.["Bad no"] || patientData?.["Bed no"] || patientData?.Room || "-"}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Age</span>
@@ -71,15 +130,15 @@ const PatientDetail = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Gender</span>
-                  <span className="font-bold text-gray-800">{patientData?.Sex || "-"}</span>
+                  <span className="font-bold text-gray-800">{patientData?.Gender || patientData?.Sex || "-"}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Blood group</span>
                   <span className="font-bold text-gray-800">{patientData?.["Blood group"] || "-"}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Height (m)</span>
-                  <span className="font-bold text-gray-800">{patientData?.Height || "-"}</span>
+                  <span className="text-gray-500">Height (cm)</span>
+                  <span className="font-bold text-gray-800">{patientData?.Heigh || patientData?.Height || "-"}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Weight(kg)</span>
@@ -133,7 +192,9 @@ const PatientDetail = () => {
                  <div className="flex justify-between items-start mb-4">
                    <div>
                      <h3 className="font-bold text-gray-900">Heart rate</h3>
-                     <p className="text-xs text-gray-500">November 26, 2025 at 7:50:26 PM +07</p>
+                     <p className="text-xs text-gray-500">
+                        {realtime?.timestamp ? formatTime(realtime.timestamp) : (latest?.timestamp ? formatTime(latest.timestamp) : "November 26, 2025 at 7:50:26 PM +07")}
+                     </p>
                    </div>
                    <div className="flex items-center gap-2">
                       <div className="flex bg-gray-100 rounded p-0.5">
@@ -142,7 +203,9 @@ const PatientDetail = () => {
                         <button className="px-2 py-0.5 text-xs text-gray-500">1 W</button>
                       </div>
                       <div className="text-right">
-                         <span className="block text-sm font-bold text-blue-500">89 bmp</span>
+                         <span className="block text-sm font-bold text-blue-500">
+                            {realtime?.PPG !== undefined ? Math.round(realtime.PPG) : (latest?.PPG_Hrv !== undefined ? Math.round(latest.PPG_Hrv) : "89")} bmp
+                         </span>
                          <span className="block text-[10px] text-gray-400">Average</span>
                       </div>
                    </div>
@@ -160,7 +223,9 @@ const PatientDetail = () => {
                  <div className="flex justify-between items-start mb-4">
                    <div>
                      <h3 className="font-bold text-gray-900">Electrodermal activity</h3>
-                     <p className="text-xs text-gray-500">November 26, 2025 at 7:59:26 PM +07</p>
+                     <p className="text-xs text-gray-500">
+                        {realtime?.timestamp ? formatTime(realtime.timestamp) : (latest?.timestamp ? formatTime(latest.timestamp) : "November 26, 2025 at 7:59:26 PM +07")}
+                     </p>
                    </div>
                    <div className="flex items-center gap-2">
                        <div className="flex bg-gray-100 rounded p-0.5">
@@ -169,7 +234,9 @@ const PatientDetail = () => {
                         <button className="px-2 py-0.5 text-xs text-gray-500">1 W</button>
                       </div>
                       <div className="text-right">
-                         <span className="block text-sm font-bold text-blue-500">1.4 mu</span>
+                         <span className="block text-sm font-bold text-blue-500">
+                            {realtime?.EDA !== undefined ? Number(realtime.EDA).toFixed(2) : (latest?.EDA_tonic !== undefined ? Number(latest.EDA_tonic).toFixed(2) : "1.4")} mu
+                         </span>
                          <span className="block text-[10px] text-gray-400">Average</span>
                       </div>
                    </div>
@@ -182,34 +249,43 @@ const PatientDetail = () => {
                  </div>
                </div>
 
-                {/* Treatment History */}
+                 {/* Treatment History */}
                <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
                  <h3 className="font-bold text-gray-900 mb-4">Treatment History</h3>
                  <div className="space-y-4">
-                    {/* Item 1 */}
-                    <div className="flex justify-between text-sm items-start border-b border-gray-50 pb-3">
-                       <div className="w-1/5 font-bold text-gray-800">Nov 25, 8:00 AM</div>
-                       <div className="w-3/5 text-gray-700 px-2 font-medium">Initiated emergency medications (MONA) and prioritized for intervention.</div>
-                       <div className="w-1/5 text-right text-gray-900 font-bold">ED Physician and Nurses</div>
-                    </div>
-                    {/* Item 2 */}
-                    <div className="flex justify-between text-sm items-start border-b border-gray-50 pb-3">
-                       <div className="w-1/5 font-bold text-gray-800">Nov 25, 10:30 AM</div>
-                       <div className="w-3/5 text-gray-700 px-2 font-medium">Performed Percutaneous Coronary Intervention (PCI) with stent placement to open the vessel.</div>
-                       <div className="w-1/5 text-right text-gray-900 font-bold">Interventional Cardiologist</div>
-                    </div>
-                     {/* Item 3 */}
-                    <div className="flex justify-between text-sm items-start border-b border-gray-50 pb-3">
-                       <div className="w-1/5 font-bold text-gray-800">Nov 25 - Nov 26 (Ongoing)</div>
-                       <div className="w-3/5 text-gray-700 px-2 font-medium">Continuous Anticoagulation (Heparin Drip) and management of BP/heart rate.</div>
-                       <div className="w-1/5 text-right text-gray-900 font-bold">Intensivist/ Critical Care Physician</div>
-                    </div>
-                     {/* Item 4 */}
-                    <div className="flex justify-between text-sm items-start">
-                       <div className="w-1/5 font-bold text-gray-800">Nov 26, 7:50 PM</div>
-                       <div className="w-3/5 text-gray-700 px-2 font-medium">Reassessment (Found HR 89, Moderate Pain) and medication adjustment.</div>
-                       <div className="w-1/5 text-right text-gray-900 font-bold">CCU Physician and CUU Nurses</div>
-                    </div>
+                    {/* Check if treatment history exists in data, else use static */}
+                    {patientData?.Treatment_History ? (
+                        Object.values(patientData.Treatment_History).map((item, index) => (
+                            <div key={index} className="flex justify-between text-sm items-start border-b border-gray-50 pb-3 last:border-0 text-gray-800">
+                               <div className="w-1/5 font-bold">{item.time || "-"}</div>
+                               <div className="w-3/5 text-gray-700 px-2 font-medium">{item.action || "-"}</div>
+                               <div className="w-1/5 text-right font-bold">{item.staff || "-"}</div>
+                            </div>
+                        ))
+                    ) : (
+                        <>
+                            <div className="flex justify-between text-sm items-start border-b border-gray-50 pb-3 text-gray-800">
+                               <div className="w-1/5 font-bold">Nov 25, 8:00 AM</div>
+                               <div className="w-3/5 text-gray-700 px-2 font-medium">Initiated emergency medications (MONA) and prioritized for intervention.</div>
+                               <div className="w-1/5 text-right font-bold">ED Physician and Nurses</div>
+                            </div>
+                            <div className="flex justify-between text-sm items-start border-b border-gray-50 pb-3 text-gray-800">
+                               <div className="w-1/5 font-bold">Nov 25, 10:30 AM</div>
+                               <div className="w-3/5 text-gray-700 px-2 font-medium">Performed Percutaneous Coronary Intervention (PCI) with stent placement to open the vessel.</div>
+                               <div className="w-1/5 text-right font-bold">Interventional Cardiologist</div>
+                            </div>
+                            <div className="flex justify-between text-sm items-start border-b border-gray-50 pb-3 text-gray-800">
+                               <div className="w-1/5 font-bold">Nov 25 - Nov 26 (Ongoing)</div>
+                               <div className="w-3/5 text-gray-700 px-2 font-medium">Continuous Anticoagulation (Heparin Drip) and management of BP/heart rate.</div>
+                               <div className="w-1/5 text-right font-bold">Intensivist/ Critical Care Physician</div>
+                            </div>
+                            <div className="flex justify-between text-sm items-start text-gray-800">
+                               <div className="w-1/5 font-bold">Nov 26, 7:50 PM</div>
+                               <div className="w-3/5 text-gray-700 px-2 font-medium">Reassessment (Found HR 89, Moderate Pain) and medication adjustment.</div>
+                               <div className="w-1/5 text-right font-bold">CCU Physician and CUU Nurses</div>
+                            </div>
+                        </>
+                    )}
                  </div>
                </div>
 
@@ -225,14 +301,14 @@ const PatientDetail = () => {
                            <img src="https://i.pravatar.cc/150?img=32" alt="Doctor" className="w-full h-full object-cover" />
                        </div>
                        <div>
-                          <h3 className="font-bold text-[#1e3a8a] text-lg">Dr. {patientData?.Doctor_name || "Jane Doe"}</h3>
-                          <p className="text-xs text-gray-500 font-bold">Cardiologist</p>
-                          <p className="text-xs text-blue-500">Merisa's Doctor</p>
+                          <h3 className="font-bold text-[#1e3a8a] text-lg">{doctorData?.name || patientData?.Doctor_name || "Jane Dhoe"}</h3>
+                          <p className="text-xs text-gray-500 font-bold">{doctorData?.specialist || "Cardiologist"}</p>
+                          <p className="text-xs text-blue-500">{patientData?.name ? `${patientData.name.split(' ')[0]}'s Doctor` : "Patient's Doctor"}</p>
                        </div>
                     </div>
                     <div className="text-xs text-blue-500 mb-2 font-bold cursor-pointer">Details</div>
                     <div className="text-xs space-y-2 text-gray-800">
-                       <p><span className="font-bold">Time of Assessment : </span> November 26, 2025, at 7:50 PM</p>
+                       <p><span className="font-bold">Time of Assessment : </span> {latest?.timestamp ? formatTime(latest.timestamp) : "November 26, 2025, at 7:50 PM"}</p>
                        <p><span className="font-bold">Chief Complaint : </span> No active Chest Pain (NACP) reported.</p>
                        <p><span className="font-bold">Note : </span> Heart sounds regular. No new murmurs. Clear breath sounds bilaterally</p>
                     </div>
@@ -242,36 +318,76 @@ const PatientDetail = () => {
                 <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
                    <h3 className="font-bold text-gray-900 mb-6">Pain Prediction History</h3>
                    <div className="relative border-l-2 border-gray-100 ml-3 space-y-8">
+                      {/* Dynamic History List */}
+                      {(() => {
+                          let historyList = [];
+                          if (patientData?.["Device no"]) {
+                                Object.values(patientData["Device no"]).forEach(device => {
+                                    if (device.prediction_history) {
+                                        historyList.push(...Object.values(device.prediction_history));
+                                    }
+                                });
+                          }
+                          historyList = historyList.filter(h => h.painlevel == 1);
+                          historyList.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+
+                          const isLatestActive = latest && latest.painlevel == 1;
+                          // If active, assume the first history item corresponds to this active event (pushed on start), so skip it to avoid dupe.
+                          const showHistoryFromIndex = isLatestActive ? 1 : 0;
+                          const historyToShow = historyList.slice(showHistoryFromIndex);
+
+                          return (
+                            <>
+                                {isLatestActive && (
+                                  <div className="relative pl-6 mb-8">
+                                     <div className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-[#fee2e2] border-2 border-white"></div>
+                                     <div>
+                                        <h4 className="font-bold text-gray-900 text-sm">Pain</h4>
+                                        <p className="text-[10px] text-gray-500">
+                                            {formatTime(latest.timestamp)}
+                                        </p>
+                                     </div>
+                                  </div>
+                                )}
+
+                                {historyToShow.map((item, idx) => (
+                                  <div key={idx} className="relative pl-6 mb-8">
+                                     <div className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-[#fee2e2] border-2 border-white"></div>
+                                     <div>
+                                        <h4 className="font-bold text-gray-900 text-sm">Pain</h4>
+                                        <p className="text-[10px] text-gray-500">
+                                            {formatTime(item.timestamp)}
+                                        </p>
+                                     </div>
+                                  </div>
+                                ))}
+                            </>
+                          );
+                      })()}
+
+                      {/* Static History (Mockup) */}
                       {/* Event 1 */}
-                      <div className="relative pl-6">
-                         <div className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-[#fef3c7] border-2 border-white"></div>
-                         <div>
-                            <h4 className="font-bold text-gray-900 text-sm">Moderate Pain</h4>
-                            <p className="text-[10px] text-gray-500">November 26, 2025 at 7:50:26 PM +07</p>
-                         </div>
-                      </div>
-                       {/* Event 2 */}
                       <div className="relative pl-6">
                          <div className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-[#fae8ff] border-2 border-white"></div>
                          <div>
                             <h4 className="font-bold text-gray-900 text-sm">Mild Pain</h4>
-                            <p className="text-[10px] text-gray-500">November 26, 2025 at 6:00:00 AM +07</p>
+                            <p className="text-[10px] text-gray-500">November 26, 2025 at 6:00:00 AM </p>
                          </div>
                       </div>
-                       {/* Event 3 */}
+                       {/* Event 2 */}
                       <div className="relative pl-6">
                          <div className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-[#fef3c7] border-2 border-white"></div>
                          <div>
                             <h4 className="font-bold text-gray-900 text-sm">Moderate Pain</h4>
-                            <p className="text-[10px] text-gray-500">November 25, 2025 at 7:50:26 PM +07</p>
+                            <p className="text-[10px] text-gray-500">November 25, 2025 at 7:50:26 PM </p>
                          </div>
                       </div>
-                       {/* Event 4 */}
+                       {/* Event 3 */}
                       <div className="relative pl-6">
                          <div className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-[#fee2e2] border-2 border-white"></div>
                          <div>
                             <h4 className="font-bold text-gray-900 text-sm">Severe Pain</h4>
-                            <p className="text-[10px] text-gray-500">November 25, 2025 at 8:00:00 AM +07</p>
+                            <p className="text-[10px] text-gray-500">November 25, 2025 at 8:00:00 AM </p>
                          </div>
                       </div>
                    </div>
