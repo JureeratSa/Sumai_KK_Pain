@@ -5,12 +5,21 @@ import { db } from "../../firebase";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler } from 'chart.js';
+import { Line } from 'react-chartjs-2';
+
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
+
 const PatientDetail = () => {
   const { id } = useParams();
   const [patientData, setPatientData] = useState();
   const [doctorData, setDoctorData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("patient-info");
+  const [edaHistory, setEdaHistory] = useState([]); // Array to store {time, value} objects
+  const [ppgHistory, setPpgHistory] = useState([]); // Array to store {time, value} objects for PPG
+  const [range, setRange] = useState('Now'); // 'Now', '1D', '1W'
+
 
   useEffect(() => {
     if (!id) return;
@@ -21,6 +30,63 @@ const PatientDetail = () => {
       const data = snapshot.val();
       if (data) {
         setPatientData(data);
+
+        // --- Data Accumulation Logic for Charts ---
+        if (data["Device no"]) {
+           const devices = Object.values(data["Device no"]);
+           let currentEda = null;
+           let currentPpg = null; // Add PPG var
+           let currentTs = null;
+
+           for (const device of devices) {
+              // Priority: 1 s > 1s
+              if (device['1 s']) {
+                  currentEda = device['1 s'].EDA;
+                  currentPpg = device['1 s'].PPG; // Get PPG
+                  currentTs = device['1 s'].timestamp;
+                  break; 
+              }
+              if (device['1s']) {
+                  currentEda = device['1s'].EDA;
+                  currentPpg = device['1s'].PPG; // Get PPG
+                  currentTs = device['1s'].timestamp;
+                  break;
+              }
+           }
+
+           if (currentTs) {
+               // Update EDA
+               if (currentEda !== null) {
+                   const newItem = { 
+                       time: new Date(currentTs), 
+                       value: Number(currentEda) 
+                   };
+                   
+                   setEdaHistory(prev => {
+                       if (prev.length > 0 && prev[prev.length - 1].time.getTime() === newItem.time.getTime()) return prev;
+                       const newHistory = [...prev, newItem];
+                       if (newHistory.length > 50) return newHistory.slice(newHistory.length - 50);
+                       return newHistory;
+                   });
+               }
+
+               // Update PPG
+               if (currentPpg !== null) {
+                   const newItem = { 
+                       time: new Date(currentTs), 
+                       value: Number(currentPpg) 
+                   };
+                   
+                   setPpgHistory(prev => {
+                       if (prev.length > 0 && prev[prev.length - 1].time.getTime() === newItem.time.getTime()) return prev;
+                       const newHistory = [...prev, newItem];
+                       if (newHistory.length > 50) return newHistory.slice(newHistory.length - 50);
+                       return newHistory;
+                   });
+               }
+           }
+        }
+        // ------------------------------------------
       }
       setLoading(false);
     });
@@ -65,7 +131,7 @@ const PatientDetail = () => {
         latest = allPredicts[0];
       }
 
-      // 2. Find Realtime Data (1s) for Charts (Heart Rate / EDA)
+      // 2. Find Realtime Data (1s) or Summary (1min) for Charts (Heart Rate / EDA)
       for (const device of devices) {
           // Check for "1 s" (common) or "1s"
           if (device['1 s']) {
@@ -87,6 +153,35 @@ const PatientDetail = () => {
       });
   };
 
+  // --- Mock Data Generator ---
+  const getMockData = (type, range) => {
+      const count = range === '1D' ? 24 : 7; // Points: 24h or 7d
+      const data = [];
+      const now = new Date();
+      
+      for (let i = count; i >= 0; i--) {
+          const t = new Date(now);
+          if (range === '1D') t.setHours(t.getHours() - i);
+          else t.setDate(t.getDate() - i);
+
+          let val;
+          if (type === 'heart') {
+              // Mock HR between 70-100 with some random noise
+              val = 70 + Math.random() * 30 + (Math.sin(i) * 10);
+          } else {
+              // Mock EDA between 0.01 - 0.05
+              val = 0.02 + Math.random() * 0.02 + (Math.cos(i) * 0.01);
+          }
+          data.push({
+              time: range === '1D' ? t.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : t.toLocaleDateString([], {weekday: 'short'}),
+              value: val
+          });
+      }
+      return data;
+  };
+
+  // ---------------------------
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="flex h-screen overflow-hidden">
@@ -94,9 +189,8 @@ const PatientDetail = () => {
         <div className="w-1/4 bg-white p-6 border-r border-gray-100 overflow-y-auto">
              {/* Profile Image & Name */}
             <div className="flex flex-col items-center mb-6">
-              <div className="w-24 h-24 rounded-lg bg-gray-200 overflow-hidden mb-4">
-                 <img src="https://i.pravatar.cc/150?img=5" alt="Patient" className="w-full h-full object-cover" />
-              </div>
+              {/* Image Removed */}
+
               <h2 className="text-xl font-bold text-[#1e3a8a] text-center">
                 {patientData?.name || "-"}
               </h2>
@@ -198,9 +292,9 @@ const PatientDetail = () => {
                    </div>
                    <div className="flex items-center gap-2">
                       <div className="flex bg-gray-100 rounded p-0.5">
-                        <button className="px-2 py-0.5 text-xs bg-blue-100 text-blue-600 font-bold rounded">Now</button>
-                        <button className="px-2 py-0.5 text-xs text-gray-500">1 D</button>
-                        <button className="px-2 py-0.5 text-xs text-gray-500">1 W</button>
+                        <button onClick={() => setRange('Now')} className={`px-2 py-0.5 text-xs font-bold rounded ${range === 'Now' ? 'bg-blue-100 text-blue-600' : 'text-gray-500'}`}>Now</button>
+                        <button onClick={() => setRange('1D')} className={`px-2 py-0.5 text-xs font-bold rounded ${range === '1D' ? 'bg-blue-100 text-blue-600' : 'text-gray-500'}`}>1 D</button>
+                        <button onClick={() => setRange('1W')} className={`px-2 py-0.5 text-xs font-bold rounded ${range === '1W' ? 'bg-blue-100 text-blue-600' : 'text-gray-500'}`}>1 W</button>
                       </div>
                       <div className="text-right">
                          <span className="block text-sm font-bold text-blue-500">
@@ -210,44 +304,107 @@ const PatientDetail = () => {
                       </div>
                    </div>
                  </div>
-                 {/* Placeholder for Chart */}
-                 <div className="h-40 bg-blue-50/30 rounded border border-blue-50 flex items-center justify-center relative overflow-hidden">
-                    <svg className="w-full h-full text-blue-400" viewBox="0 0 300 100" preserveAspectRatio="none">
-                       <path d="M0,50 Q20,40 40,60 T80,50 T120,50 T160,30 T200,70 T240,50 T280,50 T320,50" fill="none" stroke="currentColor" strokeWidth="2" />
-                    </svg>
+                 {/* Real Chart */}
+                 <div className="h-40 w-full">
+                    <Line 
+                       data={{
+                           labels: range === 'Now' ? ppgHistory.map(d => d.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })) : getMockData('heart', range).map(d => d.time),
+                           datasets: [{
+                               label: 'Heart Rate (PPG)',
+                               data: range === 'Now' ? ppgHistory.map(d => d.value) : getMockData('heart', range).map(d => d.value),
+                               borderColor: '#3b82f6', // Blue-500
+                               backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                               tension: 0.4, // Smooth curve for PPG
+                               pointRadius: range === 'Now' ? 0 : 3,
+                               borderWidth: 2,
+                               fill: true,
+                           }]
+                       }}
+                       options={{
+                           responsive: true,
+                           maintainAspectRatio: false,
+                           animation: { duration: 0 }, 
+                           scales: {
+                               x: {
+                                   display: true,
+                                   grid: { display: false },
+                                   ticks: { maxTicksLimit: 5 }
+                               },
+                               y: {
+                                   display: true, 
+                               }
+                           },
+                           plugins: {
+                               legend: { display: false },
+                               tooltip: { enabled: true }
+                           }
+                       }}
+                    />
                  </div>
                </div>
 
                {/* EDA Chart */}
-               <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
-                 <div className="flex justify-between items-start mb-4">
-                   <div>
-                     <h3 className="font-bold text-gray-900">Electrodermal activity</h3>
-                     <p className="text-xs text-gray-500">
-                        {realtime?.timestamp ? formatTime(realtime.timestamp) : (latest?.timestamp ? formatTime(latest.timestamp) : "November 26, 2025 at 7:59:26 PM +07")}
-                     </p>
-                   </div>
-                   <div className="flex items-center gap-2">
-                       <div className="flex bg-gray-100 rounded p-0.5">
-                        <button className="px-2 py-0.5 text-xs bg-blue-100 text-blue-600 font-bold rounded">Now</button>
-                        <button className="px-2 py-0.5 text-xs text-gray-500">1 D</button>
-                        <button className="px-2 py-0.5 text-xs text-gray-500">1 W</button>
-                      </div>
-                      <div className="text-right">
-                         <span className="block text-sm font-bold text-blue-500">
-                            {realtime?.EDA !== undefined ? Number(realtime.EDA).toFixed(2) : (latest?.EDA_tonic !== undefined ? Number(latest.EDA_tonic).toFixed(2) : "1.4")} mu
-                         </span>
-                         <span className="block text-[10px] text-gray-400">Average</span>
-                      </div>
-                   </div>
-                 </div>
-                 {/* Placeholder for Chart */}
-                 <div className="h-40 bg-purple-50/30 rounded border border-purple-50 flex items-center justify-center relative overflow-hidden">
-                    <svg className="w-full h-full text-purple-400" viewBox="0 0 300 100" preserveAspectRatio="none">
-                       <path d="M0,50 Q30,60 60,40 T120,50 T180,60 T240,30 T300,50" fill="none" stroke="currentColor" strokeWidth="2" />
-                    </svg>
-                 </div>
-               </div>
+                <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="font-bold text-gray-900">Electrodermal activity</h3>
+                      <p className="text-xs text-gray-500">
+                         {realtime?.timestamp ? formatTime(realtime.timestamp) : (latest?.timestamp ? formatTime(latest.timestamp) : "Loading...")}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <div className="flex bg-gray-100 rounded p-0.5">
+                         <button onClick={() => setRange('Now')} className={`px-2 py-0.5 text-xs font-bold rounded ${range === 'Now' ? 'bg-blue-100 text-blue-600' : 'text-gray-500'}`}>Now</button>
+                         <button onClick={() => setRange('1D')} className={`px-2 py-0.5 text-xs font-bold rounded ${range === '1D' ? 'bg-blue-100 text-blue-600' : 'text-gray-500'}`}>1 D</button>
+                         <button onClick={() => setRange('1W')} className={`px-2 py-0.5 text-xs font-bold rounded ${range === '1W' ? 'bg-blue-100 text-blue-600' : 'text-gray-500'}`}>1 W</button>
+                       </div>
+                       <div className="text-right">
+                          <span className="block text-sm font-bold text-blue-500">
+                             {realtime?.EDA !== undefined ? Number(realtime.EDA).toFixed(5) : (latest?.EDA_tonic !== undefined ? Number(latest.EDA_tonic).toFixed(5) : "-")} mu
+                          </span>
+                          <span className="block text-[10px] text-gray-400">Average</span>
+                       </div>
+                    </div>
+                  </div>
+                  {/* Real Chart */}
+                  <div className="h-40 w-full">
+                     <Line 
+                        data={{
+                            labels: range === 'Now' ? edaHistory.map(d => d.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })) : getMockData('eda', range).map(d => d.time),
+                            datasets: [{
+                                label: 'EDA',
+                                data: range === 'Now' ? edaHistory.map(d => d.value) : getMockData('eda', range).map(d => d.value),
+                                borderColor: '#8b5cf6', // Purple-500
+                                backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                                tension: 0, // Sharp angles (มุมแหลม)
+                                pointRadius: range === 'Now' ? 0 : 3,
+                                borderWidth: 2,
+                                fill: true,
+                            }]
+                        }}
+                        options={{
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            animation: { duration: 0 }, // Disable animation for realtime performance
+                            scales: {
+                                x: {
+                                    display: true,
+                                    grid: { display: false },
+                                    ticks: { maxTicksLimit: 5 }
+                                },
+                                y: {
+                                    display: true, // Hide Y axis as per design style or keep minimal? User didn't specify, but design often hides it. Let's hide for clean look.
+                                    min: 0, // EDA is positive
+                                }
+                            },
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: { enabled: true }
+                            }
+                        }}
+                     />
+                  </div>
+                </div>
 
                  {/* Treatment History */}
                <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
@@ -297,9 +454,7 @@ const PatientDetail = () => {
                 {/* Doctor Card */}
                 <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
                     <div className="flex items-center gap-4 mb-4">
-                       <div className="w-16 h-16 rounded-full bg-gray-200 overflow-hidden">
-                           <img src="https://i.pravatar.cc/150?img=32" alt="Doctor" className="w-full h-full object-cover" />
-                       </div>
+                       {/* Doctor Image Removed */}
                        <div>
                           <h3 className="font-bold text-[#1e3a8a] text-lg">{doctorData?.name || patientData?.Doctor_name || "Jane Dhoe"}</h3>
                           <p className="text-xs text-gray-500 font-bold">{doctorData?.specialist || "Cardiologist"}</p>
