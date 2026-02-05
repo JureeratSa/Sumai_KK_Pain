@@ -1,6 +1,9 @@
 import joblib
 from sklearn.ensemble import RandomForestClassifier
-model_dumb = joblib.load(rf"/Users/kaew/Downloads/SIC_Neen_Kaew-main/Back/RF-2.pkl")
+import os
+base_path = os.path.dirname(os.path.abspath(__file__))
+model_path = os.path.join(base_path, "RF-2.pkl")
+model_dumb = joblib.load(model_path)
 
 #"D:\Work\Project\Model_Dumb\Model_Dumbxgb_model_['EDA_Phasic_EmotiBit', 'EDA_Tonic_EmotiBit', 'BMI', 'SkinTemp_Emo'].pkl"
 

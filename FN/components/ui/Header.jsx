@@ -1,15 +1,17 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { MenuOutlined, BellFilled, FileTextOutlined, UserOutlined, PieChartOutlined, AppstoreOutlined, MinusCircleFilled, ClockCircleOutlined } from '@ant-design/icons';
 import { ref, onValue, update } from 'firebase/database';
 import { db } from '@/app/firebase';
 
 const Header = () => {
     const router = useRouter();
+    const pathname = usePathname(); // Get current URL path
     const [isSidebarOpen, setSidebarOpen] = useState(false);
-    const [activeMenu, setActiveMenu] = useState('monitor');
+    // Derive activeMenu from pathname instead of manual state
+    const activeMenu = pathname === '/monitor' ? 'monitor' : 'dashboard';
     const [showNewPatients, setShowNewPatients] = useState(false);
     const [newPatients, setNewPatients] = useState([]);
     
@@ -378,7 +380,6 @@ const Header = () => {
           <nav className="space-y-2">
             <button 
               onClick={() => {
-                setActiveMenu('dashboard');
                 setSidebarOpen(false);
                 router.push('/');
               }}
@@ -394,7 +395,6 @@ const Header = () => {
 
             <button 
               onClick={() => {
-                setActiveMenu('monitor');
                 setSidebarOpen(false);
                 router.push('/monitor');
               }}

@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+firebase-admin
+numpy
+pandas
+neurokit2
+apscheduler
+pyhrv
+scikit-learn
+joblib
+matplotlib
