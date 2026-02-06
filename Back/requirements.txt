@@ -9,3 +9,4 @@ pyhrv
 scikit-learn
 joblib
 matplotlib
+peakutils
