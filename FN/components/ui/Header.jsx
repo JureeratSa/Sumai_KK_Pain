@@ -194,12 +194,12 @@ const Header = () => {
             )}
           </button>
 
-          <button 
+          <div 
+            className="relative text-gray-700 hover:text-gray-900 transition-colors mr-2 cursor-pointer"
             onClick={() => {
               setShowAlerts(!showAlerts);
               if (!showAlerts) setShowNewPatients(false);
             }}
-            className="relative text-gray-700 hover:text-gray-900 transition-colors mr-2"
           >
             <BellFilled className="text-2xl" />
             {alerts.length > 0 && (
@@ -268,7 +268,7 @@ const Header = () => {
                     </div>
                 </div>
             )}
-          </button>
+          </div>
 
           <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl shadow-sm border border-gray-100">
             <div className="w-8 h-8 rounded-full bg-gray-900 flex items-center justify-center text-white">

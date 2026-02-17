@@ -45,7 +45,7 @@ def store_hrv_to_firebase(hn, device_id, features):
         ref.set(features)
         print("-" * 50)
         print(f"✅ HRV UPDATED for {hn} ({device_id}) at {features['Timestamp']}")
-        print(f"   LF/HF (Norm): {features['LF_HF_ratio_Normalized']:.4f} | Total Power (Norm): {features['Total_Power_Normalized']:.4f}")
+        print(f"   LF/HF (Norm): {features['LF_HF_ratio_Normalized']:.4f} | Total Power (Norm): {features['Total_Power_Normalized']:.4f} | Heart Rate: {features['Heart_Rate']:.2f} BPM")
         print("-" * 50)
     except Exception as e:
         print(f"Error saving HRV: {e}")
@@ -104,7 +104,8 @@ def process_hrv_window(ppg_data_list):
             "HF_n_Raw": hf_n_raw,
             "LF_abs_Raw": lf_abs_raw,
             "HF_abs_Raw": hf_abs_raw,
-            "Total_Power_Raw": total_power_raw
+            "Total_Power_Raw": total_power_raw,
+            "Heart_Rate": 60000 / np.mean(nni) if len(nni) > 0 else 0
         }
     except Exception as e:
         # print(f"Calc HRV Error: {e}")

@@ -131,14 +131,13 @@ const PatientDetail = () => {
 
         for (let i = 0; i < points; i++) {
             const ts = startTs + (i * interval);
-            // Simulate Values: HR ~ 60-100, EDA ~ 0.02-0.05
-            // Add some sine wave + random noise
+            // Simulate Values: HR ~ 80-110 (Sick/Pain), EDA ~ 0.2-0.5
             let val = 0;
             if (type === 'HR') {
-                 // Base 80 + Sine wave (2 peaks a day) + random
-                 val = 575 + Math.sin(i / 10) * 100 + (Math.random() * 50 - 25);
+                 // Base 95 + Sine wave (daily variation) + random stress spikes
+                 val = 95 + Math.sin(i / 10) * 10 + (Math.random() * 10 - 5);
             } else {
-                 val = 0.03 + Math.sin(i / 15) * 0.01 + (Math.random() * 0.005 - 0.0025);
+                 val = 0.3 + Math.sin(i / 15) * 0.1 + (Math.random() * 0.05 - 0.025);
             }
             chartDataPoints.push({ ts, [type === 'HR' ? 'PPG' : 'EDA']: val });
         }
@@ -153,9 +152,10 @@ const PatientDetail = () => {
             const ts = startTs + (i * interval);
             let val = 0;
             if (type === 'HR') {
-                 val = 575 + Math.sin(i / 5) * 120 + (Math.random() * 60 - 30);
+                 // Base 90 + variation
+                 val = 90 + Math.sin(i / 5) * 15 + (Math.random() * 10 - 5);
             } else {
-                 val = 0.03 + Math.sin(i / 6) * 0.015 + (Math.random() * 0.01 - 0.005);
+                 val = 0.3 + Math.sin(i / 6) * 0.15 + (Math.random() * 0.05 - 0.025);
             }
             chartDataPoints.push({ ts, [type === 'HR' ? 'PPG' : 'EDA']: val });
         }
@@ -325,15 +325,7 @@ const PatientDetail = () => {
             </div>
           </div>
 
-          {/* Diagnosis */}
-          <div className="mb-6">
-            <h3 className="text-[#1e3a8a] font-bold border-b border-gray-200 pb-2 mb-2">
-              Primary Diagnosis
-            </h3>
-            <p className="font-bold text-gray-800 text-sm">
-              {patientData?.Diagnosis || "-"}
-            </p>
-          </div>
+
 
           {/* Allergies */}
           <div className="mb-6">
@@ -393,7 +385,7 @@ const PatientDetail = () => {
                   </div>
                 </div>
                 {/* Real Chart */}
-                <div className="h-48 w-full">
+                <div className="h-80 w-full">
                      <Line options={chartOptions} data={hrChartData} />
                 </div>
               </div>
@@ -432,84 +424,12 @@ const PatientDetail = () => {
                   </div>
                 </div>
                 {/* Real Chart */}
-                <div className="h-48 w-full">
+                <div className="h-80 w-full">
                      <Line options={chartOptions} data={edaChartData} />
                 </div>
               </div>
 
-              {/* Treatment History */}
-              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-                <h3 className="font-bold text-gray-900 mb-4">
-                  Treatment History
-                </h3>
-                <div className="space-y-4">
-                  {patientData?.Treatment_History ? (
-                    Object.values(patientData.Treatment_History).map(
-                      (item, index) => (
-                        <div
-                          key={index}
-                          className="flex justify-between text-sm items-start border-b border-gray-50 pb-3 last:border-0 text-gray-800"
-                        >
-                          <div className="w-1/5 font-bold">
-                            {item.time || "-"}
-                          </div>
-                          <div className="w-3/5 text-gray-700 px-2 font-medium">
-                            {item.action || "-"}
-                          </div>
-                          <div className="w-1/5 text-right font-bold">
-                            {item.staff || "-"}
-                          </div>
-                        </div>
-                      )
-                    )
-                  ) : (
-                    <>
-                      <div className="flex justify-between text-sm items-start border-b border-gray-50 pb-3 text-gray-800">
-                        <div className="w-1/5 font-bold">Nov 25, 8:00 AM</div>
-                        <div className="w-3/5 text-gray-700 px-2 font-medium">
-                          Initiated emergency medications (MONA) and prioritized
-                          for intervention.
-                        </div>
-                        <div className="w-1/5 text-right font-bold">
-                          ED Physician and Nurses
-                        </div>
-                      </div>
-                      <div className="flex justify-between text-sm items-start border-b border-gray-50 pb-3 text-gray-800">
-                        <div className="w-1/5 font-bold">Nov 25, 10:30 AM</div>
-                        <div className="w-3/5 text-gray-700 px-2 font-medium">
-                          Performed Percutaneous Coronary Intervention (PCI)
-                          with stent placement to open the vessel.
-                        </div>
-                        <div className="w-1/5 text-right font-bold">
-                          Interventional Cardiologist
-                        </div>
-                      </div>
-                      <div className="flex justify-between text-sm items-start border-b border-gray-50 pb-3 text-gray-800">
-                        <div className="w-1/5 font-bold">
-                          Nov 25 - Nov 26 (Ongoing)
-                        </div>
-                        <div className="w-3/5 text-gray-700 px-2 font-medium">
-                          Continuous Anticoagulation (Heparin Drip) and
-                          management of BP/heart rate.
-                        </div>
-                        <div className="w-1/5 text-right font-bold">
-                          Intensivist/ Critical Care Physician
-                        </div>
-                      </div>
-                      <div className="flex justify-between text-sm items-start text-gray-800">
-                        <div className="w-1/5 font-bold">Nov 26, 7:50 PM</div>
-                        <div className="w-3/5 text-gray-700 px-2 font-medium">
-                          Reassessment (Found HR 89, Moderate Pain) and
-                          medication adjustment.
-                        </div>
-                        <div className="w-1/5 text-right font-bold">
-                          CCU Physician and CUU Nurses
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
+
             </div>
 
             {/* Right Column (Doctor & Pain History) */}
@@ -534,25 +454,7 @@ const PatientDetail = () => {
                     </p>
                   </div>
                 </div>
-                <div className="text-xs text-blue-500 mb-2 font-bold cursor-pointer">
-                  Details
-                </div>
-                <div className="text-xs space-y-2 text-gray-800">
-                  <p>
-                    <span className="font-bold">Time of Assessment : </span>{" "}
-                    {latest?.timestamp
-                      ? formatTime(latest.timestamp)
-                      : "November 26, 2025, at 7:50 PM"}
-                  </p>
-                  <p>
-                    <span className="font-bold">Chief Complaint : </span> No
-                    active Chest Pain (NACP) reported.
-                  </p>
-                  <p>
-                    <span className="font-bold">Note : </span> Heart sounds
-                    regular. No new murmurs. Clear breath sounds bilaterally
-                  </p>
-                </div>
+
               </div>
 
               {/* Pain Prediction History */}
@@ -619,40 +521,7 @@ const PatientDetail = () => {
                     );
                   })()}
 
-                  {/* Static Mock History to show UI if no dynamic data */}
-                  <div className="relative pl-6">
-                    <div className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-[#fae8ff] border-2 border-white"></div>
-                    <div>
-                      <h4 className="font-bold text-gray-900 text-sm">
-                        Mild Pain
-                      </h4>
-                      <p className="text-[10px] text-gray-500">
-                        November 26, 2025 at 6:00:00 AM{" "}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="relative pl-6">
-                    <div className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-[#fef3c7] border-2 border-white"></div>
-                    <div>
-                      <h4 className="font-bold text-gray-900 text-sm">
-                        Moderate Pain
-                      </h4>
-                      <p className="text-[10px] text-gray-500">
-                        November 25, 2025 at 7:50:26 PM{" "}
-                      </p>
-                    </div>
-                  </div>
-                   <div className="relative pl-6">
-                    <div className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-[#fee2e2] border-2 border-white"></div>
-                    <div>
-                      <h4 className="font-bold text-gray-900 text-sm">
-                        Severe Pain
-                      </h4>
-                      <p className="text-[10px] text-gray-500">
-                        November 25, 2025 at 8:00:00 AM{" "}
-                      </p>
-                    </div>
-                  </div>
+
                 </div>
               </div>
             </div>
