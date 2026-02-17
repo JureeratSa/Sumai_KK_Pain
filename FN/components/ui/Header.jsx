@@ -68,7 +68,7 @@ const Header = () => {
                                     // Try multiple variations for Bed number key
                                     bed: patient['Bad no'] || patient['Bad_no'] || patient['Bed no'] || patient['Room'] || patient['bed_no'] || 'Unknown',
                                     time: deviceData.predict.timestamp || 'Now',
-                                    severity: 'Severe Pain',
+                                    severity: 'Pain',
                                     hn: hn
                                 });
                             }
