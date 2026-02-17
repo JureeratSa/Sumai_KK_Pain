@@ -194,23 +194,18 @@ const PatientDetail = () => {
 
   // Calculate Realtime/Latest Values for Display
   
-  // 1. Try to get Calculated Heart Rate from Backend (preprocessing/HRV)
-  let backendHeartRate = 0;
+  // 1. Try to get Calculated HRV (LF/HF Ratio)
+  let backendLFHF = 0;
   if (patientData?.["Device no"]) {
     const device = Object.values(patientData["Device no"])[0];
-    if (device?.preprocessing?.HRV?.Heart_Rate) {
-        backendHeartRate = device.preprocessing.HRV.Heart_Rate;
+    if (device?.preprocessing?.HRV?.LF_HF_ratio_Raw) {
+        // You can choose LF_HF_ratio_Raw or LF_HF_ratio_Normalized
+        backendLFHF = device.preprocessing.HRV.LF_HF_ratio_Raw; 
     }
   }
 
-  // 2. Fallback or Raw PPG for Graph
-  const currentPPG = hrChartData.datasets[0]?.data[hrChartData.datasets[0]?.data.length - 1] 
-                     || (patientData?.["Device no"] ? Object.values(patientData["Device no"])[0]?.['1s']?.PPG : 0)
-                     || 0;
-                     
-  // Display Logic: If backend HR is available and valid (>0), use it. 
-  // Otherwise, if PPG is huge (>250), it's likely raw data, so don't show it as BPM (show '-' or backend value).
-  const displayHeartRate = backendHeartRate > 0 ? backendHeartRate : (currentPPG > 250 ? "-" : currentPPG);
+  // 2. Logic: If calculated LF/HF is available, use it. Otherwise "-"
+  const displayLFHF = backendLFHF > 0 ? backendLFHF : "-";
 
   const currentEDA = edaChartData.datasets[0]?.data[edaChartData.datasets[0]?.data.length - 1]
                      || (patientData?.["Device no"] ? Object.values(patientData["Device no"])[0]?.['1s']?.EDA : 0)
@@ -372,7 +367,7 @@ const PatientDetail = () => {
               <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <h3 className="font-bold text-gray-900">Heart rate</h3>
+                    <h3 className="font-bold text-gray-900">HRV (LF/HF)</h3>
                     <p className="text-xs text-gray-500">
                         {patientData?.["Device no"] ? formatTime(Date.now()) : "No data"}
                     </p>
@@ -391,10 +386,10 @@ const PatientDetail = () => {
                     </div>
                     <div className="text-right">
                       <span className="block text-sm font-bold text-blue-500" style={{color: 'rgb(96, 165, 250)'}}>
-                        {displayHeartRate !== "-" ? Math.round(displayHeartRate) : "-"} bmp
+                        {displayLFHF !== "-" ? Number(displayLFHF).toFixed(2) : "-"}
                       </span>
                       <span className="block text-[10px] text-gray-400">
-                        Current Heart Rate
+                        Latest LF/HF
                       </span>
                     </div>
                   </div>
