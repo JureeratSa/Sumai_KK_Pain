@@ -193,10 +193,25 @@ const PatientDetail = () => {
   const edaChartData = useMemo(() => getChartData('EDA'), [patientData, chartRange]);
 
   // Calculate Realtime/Latest Values for Display
+  
+  // 1. Try to get Calculated Heart Rate from Backend (preprocessing/HRV)
+  let backendHeartRate = 0;
+  if (patientData?.["Device no"]) {
+    const device = Object.values(patientData["Device no"])[0];
+    if (device?.preprocessing?.HRV?.Heart_Rate) {
+        backendHeartRate = device.preprocessing.HRV.Heart_Rate;
+    }
+  }
+
+  // 2. Fallback or Raw PPG for Graph
   const currentPPG = hrChartData.datasets[0]?.data[hrChartData.datasets[0]?.data.length - 1] 
                      || (patientData?.["Device no"] ? Object.values(patientData["Device no"])[0]?.['1s']?.PPG : 0)
                      || 0;
                      
+  // Display Logic: If backend HR is available and valid (>0), use it. 
+  // Otherwise, if PPG is huge (>250), it's likely raw data, so don't show it as BPM (show '-' or backend value).
+  const displayHeartRate = backendHeartRate > 0 ? backendHeartRate : (currentPPG > 250 ? "-" : currentPPG);
+
   const currentEDA = edaChartData.datasets[0]?.data[edaChartData.datasets[0]?.data.length - 1]
                      || (patientData?.["Device no"] ? Object.values(patientData["Device no"])[0]?.['1s']?.EDA : 0)
                      || 0;
@@ -376,10 +391,10 @@ const PatientDetail = () => {
                     </div>
                     <div className="text-right">
                       <span className="block text-sm font-bold text-blue-500" style={{color: 'rgb(96, 165, 250)'}}>
-                        {Math.round(currentPPG)} bmp
+                        {displayHeartRate !== "-" ? Math.round(displayHeartRate) : "-"} bmp
                       </span>
                       <span className="block text-[10px] text-gray-400">
-                        Average
+                        Current Heart Rate
                       </span>
                     </div>
                   </div>
