@@ -38,11 +38,16 @@ def normalize_value(val, min_v, max_v):
     if val > max_v: return 1.0
     return (val - min_v) / (max_v - min_v)
 
-def store_hrv_to_firebase(hn, device_id, features):
     try:
         # Save to: patient/{HN}/Device no/{DeviceID}/preprocessing/HRV
-        ref = db.reference(f"patient/{hn}/Device no/{device_id}/preprocessing/HRV")
-        ref.set(features)
+        # Save Latest
+        ref_latest = db.reference(f"patient/{hn}/Device no/{device_id}/preprocessing/HRV")
+        ref_latest.set(features)
+        
+        # Save History (timestamped) for Graphing
+        ts_key = int(time.time() * 1000)
+        ref_history = db.reference(f"patient/{hn}/Device no/{device_id}/preprocessing/HRV_History/{ts_key}")
+        ref_history.set(features)
         print("-" * 50)
         print(f"✅ HRV UPDATED for {hn} ({device_id}) at {features['Timestamp']}")
         print(f"   LF/HF (Norm): {features['LF_HF_ratio_Normalized']:.4f} | Total Power (Norm): {features['Total_Power_Normalized']:.4f} | Heart Rate: {features['Heart_Rate']:.2f} BPM")

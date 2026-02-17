@@ -114,13 +114,30 @@ const PatientDetail = () => {
     let nowTs = Date.now() / 1000;
     
     if (chartRange === "Now") {
-        // Use Real Data for "Now" (Live)
-        // If empty, return empty
-        if (realData.length > 0) {
-            chartDataPoints = realData.slice(-60);
+        if (type === 'HR') {
+            // New HRV Graph Logic: Fetch from HRV_History
+            if (device && device.preprocessing && device.preprocessing.HRV_History) {
+                const history = device.preprocessing.HRV_History;
+                const hrvData = Object.entries(history).map(([key, val]) => ({
+                    ts: parseInt(key) / 1000, // timestamps in DB are ms
+                    val: val.LF_HF_ratio_Normalized // Use Normalized or Raw as needed. User asked for 0-1, so Normalized is safer, or check raw if they want specific range.
+                    // Let's use Normalized for 0-1 range as typically requested for HRV index
+                }));
+                hrvData.sort((a, b) => a.ts - b.ts);
+                
+                // Filter for last 1 hour maybe? Or just show all available since it's history
+                // Let's show last 60 points or last hour
+                chartDataPoints = hrvData.slice(-60).map(d => ({ ts: d.ts, PPG: d.val }));
+            } else {
+                 chartDataPoints = [];
+            }
         } else {
-            // Or just return empty to show "No Data"
-             chartDataPoints = [];
+            // Old Logic for EDA (still Real-time)
+            if (realData.length > 0) {
+                chartDataPoints = realData.slice(-60);
+            } else {
+                 chartDataPoints = [];
+            }
         }
     } else if (chartRange === "1D") {
         // DEMO Logic for 1D: Generate simulated data points for the last 24 hours
@@ -134,8 +151,8 @@ const PatientDetail = () => {
             // Simulate Values: HR ~ 80-110 (Sick/Pain), EDA ~ 0.2-0.5
             let val = 0;
             if (type === 'HR') {
-                 // Base 95 + Sine wave (daily variation) + random stress spikes
-                 val = 95 + Math.sin(i / 10) * 10 + (Math.random() * 10 - 5);
+                 // HRV Simulation (0-1 range)
+                 val = 0.5 + Math.sin(i / 10) * 0.2 + (Math.random() * 0.1 - 0.05);
             } else {
                  val = 0.3 + Math.sin(i / 15) * 0.1 + (Math.random() * 0.05 - 0.025);
             }
@@ -152,8 +169,8 @@ const PatientDetail = () => {
             const ts = startTs + (i * interval);
             let val = 0;
             if (type === 'HR') {
-                 // Base 90 + variation
-                 val = 90 + Math.sin(i / 5) * 15 + (Math.random() * 10 - 5);
+                 // HRV Simulation
+                 val = 0.6 + Math.sin(i / 5) * 0.15 + (Math.random() * 0.2 - 0.1);
             } else {
                  val = 0.3 + Math.sin(i / 6) * 0.15 + (Math.random() * 0.05 - 0.025);
             }
@@ -182,7 +199,7 @@ const PatientDetail = () => {
           borderColor: color,
           backgroundColor: bgColor,
           tension: 0.4, // Curve
-          pointRadius: 0, // Hide points for clean sparkline look
+          pointRadius: type === 'HR' ? 4 : 0, // Show points for HRV as it is sparse/history
           fill: true,
         },
       ],
