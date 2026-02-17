@@ -83,8 +83,10 @@ def collect_and_process_eda():
                 if not isinstance(device_content, dict):
                     continue
 
-                # Check for '1 s' data (Raw 1-second data)
+                # Check for '1 s' or '1s' data (Raw 1-second data)
                 one_sec_data = device_content.get("1 s")
+                if not one_sec_data:
+                    one_sec_data = device_content.get("1s")
                 if not one_sec_data:
                     continue
                     

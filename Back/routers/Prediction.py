@@ -11,7 +11,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 router = APIRouter()
 scheduler = BackgroundScheduler()
 
-@scheduler.scheduled_job('interval', seconds=1)
+@scheduler.scheduled_job('interval', seconds=5)
 def predict_AVG1M_from_firebase():
     try:
         # 0. Sync Legacy Data (Bridge)
