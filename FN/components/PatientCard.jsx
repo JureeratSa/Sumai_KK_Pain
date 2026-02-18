@@ -31,7 +31,24 @@ const PatientCard = ({ patient, onEdit, onClick }) => {
                 </div>
             </div>
 
-
+            <div className="card-section status-section">
+                {patient.painStatus === 'pain' ? (
+                    <span className="status-badge status-pain">
+                        <span className="status-dot"></span>
+                        Pain
+                    </span>
+                ) : patient.painStatus === 'normal' ? (
+                    <span className="status-badge status-normal">
+                        <span className="status-dot"></span>
+                        Normal
+                    </span>
+                ) : (
+                    <span className="status-badge status-unknown">
+                        <span className="status-dot"></span>
+                        N/A
+                    </span>
+                )}
+            </div>
 
             <div className="card-section action-section">
                 <button className="edit-btn" onClick={(e) => { e.stopPropagation(); onEdit(); }}>

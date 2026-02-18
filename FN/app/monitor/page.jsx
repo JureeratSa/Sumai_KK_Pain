@@ -33,6 +33,23 @@ const MonitorPage = () => {
                 
                 const patientsData = Object.keys(patientsMap).map(key => {
                     const pData = patientsMap[key];
+
+                    // Extract pain status from predict node
+                    let painStatus = 'normal';
+                    let painLevel = null;
+                    const devices = pData['Device no'];
+                    if (devices && typeof devices === 'object') {
+                        // Check the first device that has a predict node
+                        for (const devId of Object.keys(devices)) {
+                            const predict = devices[devId]?.predict;
+                            if (predict && predict.painlevel !== undefined) {
+                                painLevel = predict.painlevel;
+                                painStatus = predict.painlevel >= 1 ? 'pain' : 'normal';
+                                break;
+                            }
+                        }
+                    }
+
                     return {
                         id: key,
                         ...pData,
@@ -40,7 +57,9 @@ const MonitorPage = () => {
                         name: pData.name || 'Unknown',
                         doctor: pData.Doctor_name || pData.doctor || 'Unknown Doctor',
                         bedNumber: pData['Bed no'] || pData['Bad no'] || pData.Room || pData.bedNumber || '-',
-                        deviceNumber: pData['Assigned_Device_ID'] || pData.deviceNumber || '-'
+                        deviceNumber: pData['Assigned_Device_ID'] || pData.deviceNumber || '-',
+                        painStatus: painStatus,
+                        painLevel: painLevel
                     };
                 });
 

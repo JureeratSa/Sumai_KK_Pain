@@ -115,6 +115,64 @@
     color: #14532d;
 }
 
+/* Pain Status Badges */
+.status-pain {
+    background-color: #fee2e2;
+    color: #dc2626;
+    border: 1px solid #fca5a5;
+}
+
+.status-normal {
+    background-color: #dcfce7;
+    color: #16a34a;
+    border: 1px solid #86efac;
+}
+
+.status-unknown {
+    background-color: #f1f5f9;
+    color: #94a3b8;
+    border: 1px solid #cbd5e1;
+}
+
+.status-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+}
+
+.status-pain .status-dot {
+    background-color: #dc2626;
+    animation: pulse-red 1.5s infinite;
+}
+
+.status-normal .status-dot {
+    background-color: #16a34a;
+}
+
+.status-unknown .status-dot {
+    background-color: #94a3b8;
+}
+
+@keyframes pulse-red {
+    0% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.5;
+        transform: scale(1.3);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
 .action-section {
     margin-left: auto;
 }
