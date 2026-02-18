@@ -114,27 +114,35 @@ const PatientDetail = () => {
     let nowTs = Date.now() / 1000;
     
     if (chartRange === "Now") {
+        const nowSec = Date.now() / 1000;
+
         if (type === 'HR') {
-            // New HRV Graph Logic: Fetch from HRV_History
+            // HRV Logic: Fetch from HRV_History but filter for RECENT data only (last 1 hour)
+            // This prevents data from previous sessions (yesterday) appearing in "Now"
             if (device && device.preprocessing && device.preprocessing.HRV_History) {
                 const history = device.preprocessing.HRV_History;
-                const hrvData = Object.entries(history).map(([key, val]) => ({
-                    ts: parseInt(key) / 1000, // timestamps in DB are ms
-                    val: val.LF_HF_ratio_Normalized // Use Normalized or Raw as needed. User asked for 0-1, so Normalized is safer, or check raw if they want specific range.
-                    // Let's use Normalized for 0-1 range as typically requested for HRV index
-                }));
+                const timeThreshold = nowSec - 3600; // 1 hour ago
+
+                const hrvData = Object.entries(history)
+                    .map(([key, val]) => ({
+                        ts: parseInt(key) / 1000, // timestamps in DB are ms
+                        val: val.LF_HF_ratio_Normalized 
+                    }))
+                    .filter(d => d.ts > timeThreshold); // STICTLY NEW DATA
+
                 hrvData.sort((a, b) => a.ts - b.ts);
-                
-                // Filter for last 1 hour maybe? Or just show all available since it's history
-                // Let's show last 60 points or last hour
-                chartDataPoints = hrvData.slice(-60).map(d => ({ ts: d.ts, PPG: d.val }));
+                chartDataPoints = hrvData.map(d => ({ ts: d.ts, PPG: d.val }));
             } else {
                  chartDataPoints = [];
             }
         } else {
-            // Old Logic for EDA (still Real-time)
+            // EDA Logic: Real-time data
+            // Also filter by time to ensure we don't show old buffered data if device was off
             if (realData.length > 0) {
-                chartDataPoints = realData.slice(-60);
+                const timeThreshold = nowSec - 300; // 5 minutes buffer for EDA lookup
+                chartDataPoints = realData
+                    .filter(d => d.ts > timeThreshold)
+                    .slice(-60); // Show last 60 points of RECENT data
             } else {
                  chartDataPoints = [];
             }
